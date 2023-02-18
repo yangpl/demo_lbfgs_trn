@@ -10,31 +10,34 @@
   [2] https://en.wikipedia.org/wiki/Limited-memory_BFGS
   [3] SEISCOPE OPTIMIZATION toolbox
 */
-#include <mpi.h>
-#include <omp.h>
+/* #include <mpi.h> */
+/* #include <omp.h> */
 #include "cstd.h"
-#include "lbfgs.h"
+#include "optim.h"
 
 float rosenbrock_fg(float *x, float *g);
 void rosenbrock_Hv(float *x, float *v, float *Hv);
 
 int main (int argc, char **argv)
 {
-  int iproc, nproc, n, i;
-  lbfgs_t *opt; //pointer for lbfgs_t parameters
+
+  int n, i;
+  optim_t *opt; //pointer for optim_t parameters
   float fcost, beta, *g0;
   FILE *fp=NULL;
 
   // initialize MPI 
-  MPI_Init(&argc, &argv);
-  MPI_Comm_rank(MPI_COMM_WORLD, &iproc);
-  MPI_Comm_size(MPI_COMM_WORLD, &nproc);
-
+  //int iproc, nproc;
+  /* MPI_Init(&argc, &argv); */
+  /* MPI_Comm_rank(MPI_COMM_WORLD, &iproc); */
+  /* MPI_Comm_size(MPI_COMM_WORLD, &nproc); */
 
   initargs(argc,argv);
-  opt=alloc1(1, sizeof(lbfgs_t));
+  printf("ok\n");
+  opt = alloc1(1, sizeof(optim_t));
   
   /*-------------------------------------------------------------------------*/
+  if(!getparint("verb", &opt->verb)) opt->verb = 1;//(iproc==0)?1:0;
   if(!getparint("niter", &opt->niter)) opt->niter = 100;/* maximum number of iterations */
   if(!getparint("nls", &opt->nls)) opt->nls = 20;/* maximum number of line searches */
   if(!getparfloat("tol", &opt->tol)) opt->tol = 1e-8;/* convergence tolerance */
@@ -45,32 +48,39 @@ int main (int argc, char **argv)
   if(!getparint("bound", &opt->bound)) opt->bound = 0;/* 1 = bound on, 0 = off */
   if(!getparint("method", &opt->method)) opt->method = 2;//0=lBFGS; 1=Guass-Newton
   if(!getparint("ncg", &opt->ncg)) opt->ncg = 5;//Guass-Newton inversion
+
   
-  //allocate 
-  n=2;
-  opt->x=alloc1float(n);
-  opt->g=alloc1float(n);
-  opt->d=alloc1float(n);
-  opt->sk=alloc2float(n, opt->npair);
-  opt->yk=alloc2float(n, opt->npair);
-  opt->xmin=alloc1float(n);
-  opt->xmax=alloc1float(n);
+  n = 2;//number of parameters
+  opt->x = alloc1float(n);
+  opt->g = alloc1float(n);
+  opt->d = alloc1float(n);
+  opt->sk = alloc2float(n, opt->npair);
+  opt->yk = alloc2float(n, opt->npair);
+  opt->xmin = alloc1float(n);
+  opt->xmax = alloc1float(n);
   for(i=0; i<n; i++){
     opt->xmin[i] = 0;
     opt->xmax[i] = 2.;
   }
   if(opt->method==2) g0 = alloc1float(n);
+  printf("ok\n");
 
   //initialize
-  opt->x[0]=1.5; 
-  opt->x[1]=1.5;
+  opt->x[0] = 1.5; 
+  opt->x[1] = 1.5;
   fcost = rosenbrock_fg(opt->x, opt->g);
-  opt->f0=fcost;
-  opt->fk=fcost;
-  opt->igrad=0;
-  opt->kpair=0;
-  opt->ils=0;
+  opt->f0 = fcost;
+  opt->fk = fcost;
+  opt->igrad = 0;
+  opt->kpair = 0;
+  opt->ils = 0;
   if(opt->verb){
+    printf("l-BFGS memory length: %d\n",opt->npair);
+    printf("Maximum number of iterations: %d\n",opt->niter);
+    printf("Convergence tolerance: %3.2e\n", opt->tol);
+    printf("maximum number of line search: %d\n",opt->nls);
+    printf("initial step length: alpha=%g\n",opt->alpha);
+
     fp=fopen("iterate.txt","w");
     fprintf(fp,"==========================================================\n");
     fprintf(fp,"l-BFGS memory length: %d\n",opt->npair);
@@ -87,8 +97,8 @@ int main (int argc, char **argv)
   for(opt->iter=0; opt->iter< opt->niter; opt->iter++){
     if(opt->verb) printf("iteration=%d  fcost=%g\n", opt->iter,opt->fk/opt->f0);
     if(opt->verb){
-      opt->gk_norm=l2norm(n, opt->g);
-      fp=fopen("iterate.txt","a");
+      opt->gk_norm = l2norm(n, opt->g);
+      fp = fopen("iterate.txt","a");
       fprintf(fp,"%3d   %3.2e  %3.2e   %3.2e  %3.2e  %3d  %4d\n",
 	      opt->iter,opt->fk,opt->fk/opt->f0,opt->gk_norm,opt->alpha,opt->ils,opt->igrad);
       fclose(fp);
@@ -154,6 +164,6 @@ int main (int argc, char **argv)
   free1(opt);
   if(opt->method==2) free1float(g0);
   
-  MPI_Finalize();
+  //MPI_Finalize();
   return 0;   
 }

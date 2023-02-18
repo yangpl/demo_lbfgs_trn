@@ -21,7 +21,7 @@
    E-mail: ypl.2100@gmail.com
 */
 #include "cstd.h"
-#include "lbfgs.h"
+#include "optim.h"
 
 float l2norm(int n, float *a)
 /*< L2 norm of a vector >*/
@@ -52,7 +52,7 @@ void flipsign(int n, float *a, float *b)
 }
 
 
-void lbfgs_save(int n, float *x, float *g, float **sk, float **yk, lbfgs_t *opt)
+void lbfgs_save(int n, float *x, float *g, float **sk, float **yk, optim_t *opt)
 /*< save current model and gient >*/
 {
   int i;
@@ -73,7 +73,7 @@ void lbfgs_save(int n, float *x, float *g, float **sk, float **yk, lbfgs_t *opt)
   }
 }
 
-void lbfgs_update(int n, float *x, float *g, float **sk, float **yk, lbfgs_t *opt)
+void lbfgs_update(int n, float *x, float *g, float **sk, float **yk, optim_t *opt)
 /*< update current sk and yk >*/
 {
   int i,j;
@@ -84,7 +84,7 @@ void lbfgs_update(int n, float *x, float *g, float **sk, float **yk, lbfgs_t *op
   }
 }
 
-void lbfgs_descent(int n, float *g, float *d, float **sk, float **yk, lbfgs_t *opt)
+void lbfgs_descent(int n, float *g, float *d, float **sk, float **yk, optim_t *opt)
 /*< calculate search direction (two-loop recursion) >*/
 {
   int i, j;
@@ -139,7 +139,7 @@ void lbfgs_descent(int n, float *g, float *d, float **sk, float **yk, lbfgs_t *o
 }
 
 bool lbfgs_descent1(int n, float *g, float *q, float *rho, float *alpha,
-		    float **sk, float **yk, lbfgs_t *opt)
+		    float **sk, float **yk, optim_t *opt)
 /*< calculate search direction (1st loop of the two-loop recursion) >*/
 {
   bool loop1=false;
@@ -168,7 +168,7 @@ bool lbfgs_descent1(int n, float *g, float *q, float *rho, float *alpha,
 }
 
 void lbfgs_descent2(int n, float *g, float *q, float *rho, float *alpha,
-		    float **sk, float **yk, lbfgs_t *opt)
+		    float **sk, float **yk, optim_t *opt)
 /*< calculate search direction (2nd loop of the two-loop recursion) >*/
 {
   int i, j;
@@ -205,8 +205,8 @@ void line_search(int n, //dimension of x
 		 float *x, //input vector x
 		 float *g, //gradient of misfit function
 		 float *d, //descent direction
-		 lbfgs_fg fg, //subroutine to evaluation function and gradient
-		 lbfgs_t *opt) //pointer of l-BFGS optimization parameters
+		 optim_fg fg, //subroutine to evaluation function and gradient
+		 optim_t *opt) //pointer of l-BFGS optimization parameters
 /*< bisection line search  based on Wolfe condition >*/
 {
   int j;
@@ -274,8 +274,8 @@ void cg_solve(int n, //dimension of x
 	      float *x, //input vector x
 	      float *g, //gradient of misfit function
 	      float *d, //descent direction
-	      lbfgs_Hv Hv, //subroutine to evaluation function and gradient
-	      lbfgs_t *opt) //pointer of l-BFGS optimization parameters
+	      optim_Hv Hv, //subroutine to evaluation function and gradient
+	      optim_t *opt) //pointer of l-BFGS optimization parameters
 {
   int i,k;
   float rsold, rsnew, rs0, pAp, alp, beta, fcost;
