@@ -33,10 +33,8 @@ int main (int argc, char **argv)
   /* MPI_Comm_size(MPI_COMM_WORLD, &nproc); */
 
   initargs(argc,argv);
-  printf("ok\n");
+
   opt = alloc1(1, sizeof(optim_t));
-  
-  /*-------------------------------------------------------------------------*/
   if(!getparint("verb", &opt->verb)) opt->verb = 1;//(iproc==0)?1:0;
   if(!getparint("niter", &opt->niter)) opt->niter = 100;/* maximum number of iterations */
   if(!getparint("nls", &opt->nls)) opt->nls = 20;/* maximum number of line searches */
@@ -63,7 +61,6 @@ int main (int argc, char **argv)
     opt->xmax[i] = 2.;
   }
   if(opt->method==2) g0 = alloc1float(n);
-  printf("ok\n");
 
   //initialize
   opt->x[0] = 1.5; 
