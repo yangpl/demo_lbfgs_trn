@@ -1,9 +1,9 @@
-/* interface to implement l-BFGS algorithm 
+/* interface to implement l-BFGS and Newton-CG for nonlinear optimization 
 
    The Wolfe conditions can be found in Nocedal, Numerical Optimization,
    2nd edition, p.33
 
-   The linesearch method in this code is based first on a bracketing
+   The line search method in this code is based first on a bracketing
    strategy, then on a dichotomy algorithm. See a full description in:
    Numerical Optimizationn Theoretical and  Practical Aspects,
    J.F.Bonnans, J.C.Gilbert,  C. Lemaréchal, C.A. Sagastizábal,
