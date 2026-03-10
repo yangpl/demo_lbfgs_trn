@@ -51,6 +51,12 @@ void flipsign(int n, float *a, float *b)
   for (i=0; i<n; i++)	b[i]=-a[i];
 }
 
+bool lbfgs_pair_is_usable(int n, float *s, float *y)
+/*< check whether a curvature pair satisfies s'y > 0 >*/
+{
+  return dotprod(n, s, y) > 0.;
+}
+
 
 void lbfgs_save(int n, float *x, float *g, float **sk, float **yk, optim_t *opt)
 /*< save current model and gient >*/
@@ -82,6 +88,11 @@ void lbfgs_update(int n, float *x, float *g, float **sk, float **yk, optim_t *op
     sk[j][i]=x[i]-sk[j][i];
     yk[j][i]=g[i]-yk[j][i];
   }
+
+  if(!lbfgs_pair_is_usable(n, sk[j], yk[j])){
+    if(opt->verb) printf("Discarding L-BFGS pair with nonpositive curvature.\n");
+    opt->kpair -= 1;
+  }
 }
 
 void lbfgs_descent(int n, float *g, float *d, float **sk, float **yk, optim_t *opt)
@@ -91,9 +102,13 @@ void lbfgs_descent(int n, float *g, float *d, float **sk, float **yk, optim_t *o
   float *rho, *q, *alpha, tmp0, tmp1, gamma, beta;
 
   // safeguard
+  if(opt->kpair <= 0){
+    flipsign(n, g, d); //descent direction= -gradient
+    return;
+  }
   tmp0=l2norm(n, sk[opt->kpair-1]);
   tmp1=l2norm(n, yk[opt->kpair-1]);
-  if(!( tmp0>0. && tmp1>0.)){
+  if(!( tmp0>0. && tmp1>0.) || !lbfgs_pair_is_usable(n, sk[opt->kpair-1], yk[opt->kpair-1])){
     flipsign(n, g, d); //descent direction= -gradient
     return;
   }
@@ -151,9 +166,10 @@ bool lbfgs_descent1(int n, float *g, float *q, float *rho, float *alpha,
 
   // safeguard a descent direction from negative gradient
   // d=-q=-g
+  if(opt->kpair <= 0) return loop1;
   tmp0=l2norm(n, opt->sk[opt->kpair-1]);
   tmp1=l2norm(n, opt->yk[opt->kpair-1]);
-  if(!( tmp0>0. && tmp1>0.))	return loop1;
+  if(!( tmp0>0. && tmp1>0.) || !lbfgs_pair_is_usable(n, opt->sk[opt->kpair-1], opt->yk[opt->kpair-1]))	return loop1;
 
   for(i=opt->kpair-1; i>=0; i--){
     // calculate rho
@@ -211,18 +227,25 @@ void line_search(int n, //dimension of x
 {
   int j;
   float gxd, c1_gxd, c2_gxd, fcost, fxx, alpha1, alpha2;
-  float *xk;
+  float *gk, *xk;
   static float infinity = 1e10;
 
   //use estimated stepsize from previous iteration when iter>1
-  opt->alpha = 1.;
+  //opt->alpha = 1.;
   alpha1 = 0;
   alpha2 = infinity;
   
+  gk=alloc1float(n);  // allocate memory for store current gradient
   xk=alloc1float(n);  // allocate memory for store current x
+  memcpy(gk, g, n*sizeof(float)); // store g at k-th iteration
   memcpy(xk, x, n*sizeof(float)); // store x at k-th iteration
   //m3=the slope of the function of alpha along search d
   gxd = dotprod(n, g, d);//<G[f(x)]|d>
+  if(gxd >= 0.){
+    if(opt->verb) printf("Search direction is not descent. Falling back to steepest descent.\n");
+    flipsign(n, gk, d);
+    gxd = dotprod(n, gk, d);
+  }
   c1_gxd = opt->c1*gxd;//c1*<G[f(x)]|d>
   c2_gxd = opt->c2*gxd;//c2*<G[f(x)]|d>
   for(opt->ils=0; opt->ils<opt->nls; opt->ils++){
@@ -264,8 +287,11 @@ void line_search(int n, //dimension of x
     opt->fk = fcost;//fcost was not increased with this stepsize, accept it
   }else{
     opt->ls_fail = 1; //line search fails, exit
+    memcpy(x, xk, n*sizeof(float));
+    memcpy(g, gk, n*sizeof(float));
   }
   
+  free1float(gk);
   free1float(xk);
 }
 

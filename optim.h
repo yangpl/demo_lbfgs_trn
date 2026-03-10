@@ -45,6 +45,9 @@ float dotprod(int n, float *a, float *b);
 void flipsign(int n, float *a, float *b);
 /*< reverse the sign of the vector >*/
 
+bool lbfgs_pair_is_usable(int n, float *s, float *y);
+/*< check whether a curvature pair satisfies s'y > 0 >*/
+
 void lbfgs_save(int n, float *x, float *grad, float **sk, float **yk, optim_t *opt);
 /*< save current model and gradient >*/
 

@@ -45,8 +45,8 @@ int main (int argc, char **argv)
   if(!getparfloat("c2", &opt->c2)) opt->c2 = 0.9;  /* Nocedal value for Wolfe condition */
   if(!getparfloat("alpha", &opt->alpha)) opt->alpha = 1.;  /* initial step length */
   if(!getparint("bound", &opt->bound)) opt->bound = 0;/* 1 = bound on, 0 = off */
-  if(!getparint("method", &opt->method)) opt->method = 2;//0=lBFGS; 1=Guass-Newton
-  if(!getparint("ncg", &opt->ncg)) opt->ncg = 5;//Guass-Newton inversion
+  if(!getparint("method", &opt->method)) opt->method = 1;//0=Newton-CG; 1=l-BFGS; 2=NLCG
+  if(!getparint("ncg", &opt->ncg)) opt->ncg = 5;//Newton-CG iterations
 
   
   n = 2;//number of parameters
@@ -102,7 +102,7 @@ int main (int argc, char **argv)
       fclose(fp);
 
     }
-
+    
     if(opt->method==0){//Newton-CG, solve Hv = -g 
       cg_solve(n, opt->x, opt->g, opt->d, rosenbrock_Hv, opt);
 
@@ -154,13 +154,13 @@ int main (int argc, char **argv)
     printf("x[0]=%g  x[1]=%g \n", opt->x[0], opt->x[1]);
   }
 
+  if(opt->method==2) free1float(g0);
   free1float(opt->x);
   free1float(opt->g);
   free1float(opt->d);
   free2float(opt->sk);
   free2float(opt->yk);
   free1(opt);
-  if(opt->method==2) free1float(g0);
   
   //MPI_Finalize();
   return 0;   
