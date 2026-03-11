@@ -2,6 +2,10 @@
 
 Small nonlinear-optimization demo for the 2D Rosenbrock problem.
 
+Developer: Pengliang Yang
+
+E-mail: ypl.2100@gmail.com
+
 Implemented methods:
 
 - `method=0`: Newton-CG / truncated Newton
