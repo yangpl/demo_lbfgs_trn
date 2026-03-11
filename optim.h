@@ -1,87 +1,83 @@
-#ifndef lbfgs_h
-#define lbfgs_h
+#ifndef OPTIM_H
+#define OPTIM_H
 
-//============================================================
+#include "cstd.h"
+
+enum {
+  OPTIM_METHOD_NEWTON_CG = 0,
+  OPTIM_METHOD_LBFGS = 1,
+  OPTIM_METHOD_NLCG = 2
+};
+
+enum {
+  OPTIM_STATUS_RUNNING = 0,
+  OPTIM_STATUS_CONVERGED = 1,
+  OPTIM_STATUS_MAX_ITER = 2,
+  OPTIM_STATUS_LINE_SEARCH_FAILED = 3
+};
+
+typedef float (*optim_fg)(const float *x, float *g);
+typedef void (*optim_Hv)(const float *x, const float *v, float *Hv);
+
 typedef struct {
-    int niter; //total number of iterations
-    int iter;
-    float tol; //convergence tolerance
-    int npair; //maximum number pair allowed, l-BFGS memory length 
-    int kpair; //actual number of pair already stored
-    int nls;   //maximum number of line search
-    int ils;   //actual number of line search
-    int igrad; //number of function and gradient evaluation
-    float c1;  //Wolfe condition, Nocedal value=1e-4
-    float c2;  //Wolfe condition, Nocedal value=0.9
-    float alpha;//true step length, initial value=1
-    float f0;  //initial misfit
-    float fk;  //misfit at k-th iteration
-    float gk_norm;
-    float *x; //unknown parameter
-    float *g; //gradient
-    float *d; //descent direction
-    float **sk, **yk;//storing vectors in two-loop recursion
-    float *q, *alp, *rho; // parameters in two-loop recursion
-    int bound;//1=clip x using upper and lower bounds,0=not
-    float *xmin;//lower bound for x
-    float *xmax;//upper bound for x
-    int verb; //verbose information to print or not
-    int preco;//precondition or not
-  int ncg;
+  int n;
   int method;
-    bool loop1;//flag to check 1st loop in two-loop recursion is done or not
-    int ls_fail;
+  int niter;
+  int nls;
+  int npair;
+  int ncg;
+  int verb;
+  int bound;
+
+  int iter;
+  int ils;
+  int igrad;
+  int kpair;
+  int status;
+  int ls_fail;
+
+  float tol;
+  float c1;
+  float c2;
+  float alpha;
+  float alpha0;
+  float f0;
+  float fk;
+  float g0_norm;
+  float gk_norm;
+
+  float *x;
+  float *g;
+  float *d;
+  float *xmin;
+  float *xmax;
+  float *g_prev;
+  float *trial_x;
+  float *trial_g;
+  float *q;
+  float *rho;
+  float *alp;
+  float **sk;
+  float **yk;
 } optim_t;
 
-typedef float (*optim_fg)(float*,float*); 
-typedef void (*optim_Hv)(float*,float*,float *); 
+float l2norm(int n, const float *a);
+float dotprod(int n, const float *a, const float *b);
+void flipsign(int n, const float *a, float *b);
+bool lbfgs_pair_is_usable(int n, const float *s, const float *y);
 
-float l2norm(int n, float *a);
-/*< L2 norm of a vector >*/
+void optim_config_defaults(optim_t *opt);
+bool optim_init(optim_t *opt, int n);
+void optim_free(optim_t *opt);
+int optim_run(optim_t *opt, optim_fg fg, optim_Hv Hv);
+const char *optim_method_name(int method);
 
-float dotprod(int n, float *a, float *b);
-/*< dot product of two vectors >*/
+void lbfgs_save(int n, const float *x, const float *grad, float **sk, float **yk, optim_t *opt);
+void lbfgs_update(int n, const float *x, const float *grad, float **sk, float **yk, optim_t *opt);
+void lbfgs_descent(int n, const float *grad, float *r, float **sk, float **yk, optim_t *opt);
 
-void flipsign(int n, float *a, float *b);
-/*< reverse the sign of the vector >*/
-
-bool lbfgs_pair_is_usable(int n, float *s, float *y);
-/*< check whether a curvature pair satisfies s'y > 0 >*/
-
-void lbfgs_save(int n, float *x, float *grad, float **sk, float **yk, optim_t *opt);
-/*< save current model and gradient >*/
-
-void lbfgs_update(int n, float *x, float *grad, float **sk, float **yk, optim_t *opt);
-/*< update current sk and yk >*/
-
-void lbfgs_descent(int n, float *grad, float *r, float **sk, float **yk, optim_t *opt);
-/*< calculate search direction (two-loop recursion) >*/
-
-bool lbfgs_descent1(int n, float *g, float *q, float *rho, float *alp, 
-		    float **sk, float **yk, optim_t *opt);
-/*< calculate search direction (1st loop of the two-loop recursion) >*/
-
-void lbfgs_descent2(int n, float *g, float *q, float *rho, float *alp, 
-		    float **sk, float **yk, optim_t *opt);
-/*< calculate search direction (2nd loop of the two-loop recursion) >*/
-
-void boundx(float *x, int n, float *xmin, float *xmax);
-/*< clip x based on lower and upper bounds >*/
-
-
-void line_search(int n, //dimension of x
-		float *x, //input vector x
-		float *g, //gradient of misfit function
-		float *d, //descent direction
-		optim_fg fg, //subroutine to evaluation function and gradient
-		optim_t *opt); //pointer of l-BFGS optimization parameters
-/*< line search (Wolfe condition) >*/
-
-void cg_solve(int n, //dimension of x
-	      float *x, //input vector x
-	      float *g, //gradient of misfit function
-	      float *d, //descent direction
-	      optim_Hv Hv, //subroutine to evaluation function and gradient
-	      optim_t *opt); //pointer of l-BFGS optimization parameters
+void boundx(float *x, int n, const float *xmin, const float *xmax);
+void line_search(int n, float *x, float *g, float *d, optim_fg fg, optim_t *opt);
+void cg_solve(int n, const float *x, const float *g, float *d, optim_Hv Hv, optim_t *opt);
 
 #endif
